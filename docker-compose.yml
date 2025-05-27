@@ -1,0 +1,55 @@
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: postgres_server
+    restart: always
+    environment:
+      POSTGRES_DB: my_database
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_password_123
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init:/docker-entrypoint-initdb.d
+      - ./conf/postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./conf/pg_hba.conf:/etc/postgresql/pg_hba.conf
+    networks:
+      - postgres_network
+    command: >
+      postgres 
+      -c config_file=/etc/postgresql/postgresql.conf
+      -c hba_file=/etc/postgresql/pg_hba.conf
+      -c log_statement=all
+      -c log_destination=stderr
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: pgadmin4
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin_password_123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    ports:
+      - "8081:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./pgadmin/servers.json:/pgadmin4/servers.json
+    depends_on:
+      - postgres
+    networks:
+      - postgres_network
+
+volumes:
+  postgres_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+networks:
+  postgres_network:
+    driver: bridge
