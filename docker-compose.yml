@@ -1,7 +1,7 @@
 
 services:
   postgres:
-    image: postgres:15
+    image: pgvector/pgvector:pg17
     container_name: postgres_server
     restart: always
     environment:
@@ -19,7 +19,7 @@ services:
     networks:
       - postgres_network
     command: >
-      postgres 
+      postgres
       -c config_file=/etc/postgresql/postgresql.conf
       -c hba_file=/etc/postgresql/pg_hba.conf
       -c log_statement=all

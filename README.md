@@ -118,6 +118,7 @@ Setup ini sudah menginstall beberapa extension berguna:
 - **uuid-ossp** - Generate UUID
 - **pg_stat_statements** - Query statistics
 - **pgcrypto** - Cryptographic functions
+- **vector** - Vector similarity search (PGVector)
 
 ## Commands Berguna
 
@@ -242,3 +243,71 @@ PostgreSQL mendukung streaming replication untuk high availability.
 
 ### Monitoring dengan pg_stat_monitor
 Extension tambahan untuk monitoring yang lebih detail.
+
+## Upgrade ke PostgreSQL 17 dengan Vector Support
+
+Setup ini telah diperbarui ke PostgreSQL 17 dengan dukungan PGVector untuk similarity search berbasis vektor.
+
+### Fitur Vector
+PGVector menyediakan tipe data dan fungsi untuk menyimpan dan mencari vektor embedding, berguna untuk:
+- Semantic search
+- Similarity search
+- Machine learning applications
+- Recommendation systems
+
+Contoh penggunaan:
+```sql
+-- Membuat tabel dengan kolom vektor
+CREATE TABLE items (
+  id SERIAL PRIMARY KEY,
+  embedding vector(3);  -- vektor dengan 3 dimensi
+);
+
+-- Menambahkan data
+INSERT INTO items (embedding) VALUES ('[1,2,3]'), ('[4,5,6]');
+
+-- Melakukan cosine similarity search
+SELECT * FROM items ORDER BY embedding <=> '[3,3,3]' LIMIT 5;
+```
+
+### Upgrade dari Versi Sebelumnya
+Karena kita upgrade dari PostgreSQL 15 ke 17, kita perlu melakukan migrasi data karena versi major berbeda. Data lama tidak bisa langsung digunakan.
+
+Untuk melakukan upgrade dari PostgreSQL 15 ke 17 dengan tetap mempertahankan data:
+
+1. Stop container lama:
+   ```bash
+   docker compose down
+   ```
+
+2. Backup semua database:
+   ```bash
+   # Jika container masih bisa diakses sebelum upgrade:
+   docker exec postgres_server pg_dumpall -U postgres > backup.sql
+   ```
+   
+   Jika container tidak bisa dijalankan karena inkompatibilitas, Anda bisa membuat container sementara dengan PostgreSQL 15 image untuk mengambil backup:
+   ```bash
+   # Buat container sementara dengan PostgreSQL 15
+   docker run --rm -v postgresql_postgres_data:/var/lib/postgresql/data -e POSTGRES_DB=postgres -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=postgres_password_123 postgres:15
+   # Tapi cara ini lebih kompleks, jadi lebih baik backup sebelum upgrade
+   ```
+
+3. Remove volume lama (ini akan menghapus data PostgreSQL 15):
+   ```bash
+   docker volume rm postgresql_postgres_data
+   ```
+
+4. Update docker-compose.yml ke PostgreSQL 17 (sudah dilakukan)
+
+5. Jalankan container baru:
+   ```bash
+   docker compose up -d
+   ```
+
+6. Restore data dari backup:
+   ```bash
+   docker exec -i postgres_server psql -U postgres < backup.sql
+   ```
+
+Catatan: Proses upgrade major version PostgreSQL memerlukan dump dan restore karena struktur file internal berbeda antar versi major.
